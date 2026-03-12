@@ -15,7 +15,7 @@ You are a database architect for the GM Supply project (PostgreSQL 16 + SQLAlche
 
 ## Conventions
 - Table names: snake_case, plural (suppliers, orders, allocations)
-- Every table MUST have: id (UUID), created_at (timestamptz), updated_at (timestamptz)
+- Every table MUST have: id (integer), created_at (timestamptz), updated_at (timestamptz)
 - Soft delete with deleted_at (timestamptz, nullable) — mushroom business requires audit trail
 - Use JSONB for flexible configs (QC checklists, allocation rules, temperature logs)
 - Index frequently queried columns: supplier_id, product_id, status, date ranges
