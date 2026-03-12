@@ -1,7 +1,7 @@
 # FRD — Functional Requirements Document
 # GM Supply — Supply Chain Management System
 
-> Version: 1.0 | Status: Draft | Last Updated: 2026-03-12
+> Version: 2.0 | Status: Draft | Last Updated: 2026-03-12
 
 ---
 
@@ -11,11 +11,22 @@
 Tài liệu mô tả chi tiết các yêu cầu chức năng của hệ thống GM Supply — quản lý & phân bổ nguồn cung nấm tươi. Đây là tài liệu tham chiếu chính cho đội phát triển, QA, và stakeholders.
 
 ### 1.2 Phạm vi hệ thống
-GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi:
-- **Upstream**: Quản lý nhà cung cấp (NCC), thu mua, kiểm tra chất lượng
-- **Core**: Phân bổ chỉ tiêu, matching đơn hàng - NCC, tái phân bổ
+GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi thông qua **kiến trúc hai cổng (Dual-Portal)**:
+
+**Admin Portal** — dành cho nhân viên Nham Xanh (Procurement, QC, Warehouse, Manager, Director):
+- **Upstream**: Quản lý nhà cung cấp (NCC), duyệt đăng ký NCC mới, thu mua, kiểm tra chất lượng
+- **Core**: Phân bổ chỉ tiêu, matching đơn hàng - NCC, tái phân bổ, quản lý thương lượng
 - **Downstream**: Quản lý đơn hàng khách hàng, giao hàng, tồn kho
-- **Cross-cutting**: Báo cáo, dự báo, quản trị hệ thống
+- **Integration**: Nhận đơn hàng từ KiotViet (webhook real-time + manual sync), quản lý mapping sản phẩm
+- **Cross-cutting**: Báo cáo, dự báo, quản trị hệ thống, nhắn tin nội bộ
+
+**Supplier Portal** — dành cho nhà cung cấp (NCC Owner, NCC Staff):
+- Tự đăng ký tài khoản, cập nhật hồ sơ
+- Xem chỉ tiêu phân bổ, phản hồi/thương lượng chỉ tiêu
+- Nhập lịch thu hoạch, xác nhận giao hàng
+- Xem điểm đánh giá, lịch sử giao hàng
+- Nhắn tin với Nham Xanh
+- Hỗ trợ song ngữ (Tiếng Việt / English)
 
 ### 1.3 Đặc thù ngành
 | Yếu tố | Ảnh hưởng đến hệ thống |
@@ -36,20 +47,35 @@ GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi:
 | Fill Rate | FR | Tỷ lệ đơn hàng được đáp ứng đầy đủ |
 | Lead Time | LT | Thời gian từ đặt hàng đến nhận hàng |
 | Landed Cost | LC | Giá vốn toàn phần (mua + vận chuyển + hao hụt) |
+| Supplier Portal | SP | Cổng dành cho NCC truy cập hệ thống |
+| Admin Portal | AP | Cổng dành cho nhân viên Nham Xanh |
+| KiotViet | KV | Hệ thống bán hàng bên ngoài (POS), nguồn đơn hàng chính |
+| Negotiation | - | Quy trình thương lượng chỉ tiêu phân bổ giữa NCC và Nham Xanh |
+| Internationalization | i18n | Hỗ trợ đa ngôn ngữ (Tiếng Việt + English) |
+| Self-Registration | - | NCC tự đăng ký tài khoản, chờ Admin duyệt |
 
 ---
 
 ## 2. Actors & Roles
 
+### 2.1 Admin Portal Roles
+
 | Role | Mô tả | Modules chính |
 |------|--------|--------------|
 | **Admin** | Quản trị hệ thống, cấu hình, phân quyền | M7 Administration |
-| **Director** | Duyệt phân bổ lớn, xem báo cáo tổng hợp, mô phỏng | M3, M4, M6 |
-| **Manager** | Quản lý phân bổ, duyệt điều chuyển, giám sát NCC | M1-M6 |
-| **Procurement Staff** | Thu thập đơn hàng, liên hệ NCC, xử lý phân bổ ngày | M1, M2, M3 |
+| **Director** | Duyệt phân bổ lớn, xem báo cáo tổng hợp, mô phỏng, xử lý escalation | M3, M4, M6 |
+| **Manager** | Quản lý phân bổ, duyệt điều chuyển, giám sát NCC, duyệt đăng ký NCC, quản lý thương lượng | M1-M6, M15, M16 |
+| **Procurement Staff** | Thu thập đơn hàng, liên hệ NCC, xử lý phân bổ ngày, nhắn tin NCC | M1, M2, M3, M15 |
 | **QC Staff** | Kiểm tra chất lượng đầu vào, phân loại, reject hàng | M8 QC |
 | **Warehouse Staff** | Nhận hàng, quản lý tồn kho, xuất hàng FEFO | M5 Inventory |
 | **Viewer** | Chỉ xem báo cáo, dashboard | M6 Reports |
+
+### 2.2 Supplier Portal Roles
+
+| Role | Mô tả | Permissions |
+|------|--------|------------|
+| **NCC Owner** | Chủ/đại diện NCC. Đăng ký tài khoản, quản lý toàn bộ thông tin NCC | Full access trên Supplier Portal: profile, allocations, negotiations, deliveries, schedules, scores, messages, quản lý NCC Staff |
+| **NCC Staff** | Nhân viên NCC được Owner thêm vào | Xem allocations, nhập lịch thu hoạch, xác nhận giao hàng, nhắn tin. Không được thương lượng chỉ tiêu, không sửa profile NCC |
 
 ---
 
@@ -65,6 +91,8 @@ GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi:
 | M1.1.3 | Cập nhật thông tin NCC | P0 | Audit log ghi nhận thay đổi |
 | M1.1.4 | Soft-delete NCC (chuyển trạng thái Chấm dứt) | P0 | Không xóa vật lý, cảnh báo nếu có allocation đang active |
 | M1.1.5 | Import danh sách NCC từ Excel | P1 | Template Excel download, validate trước khi import, báo lỗi từng dòng |
+| M1.1.6 | **NCC tự đăng ký tài khoản (Self-Registration)**: NCC truy cập Supplier Portal, điền form đăng ký gồm: thông tin doanh nghiệp, giấy phép kinh doanh, vùng trồng, loại nấm, công suất. Upload tài liệu (GPKD, chứng nhận). Hệ thống gửi email xác minh (verify email). Admin/Manager review và approve/reject | P0 | Multi-step form, email verification, document upload (PDF/image), trạng thái: Pending → Approved/Rejected, notification cho cả 2 phía |
+| M1.1.7 | **NCC tự cập nhật profile**: NCC Owner có thể sửa thông tin liên hệ, địa chỉ, vùng trồng, công suất trên Supplier Portal. Thay đổi quan trọng (MST, tên pháp lý) cần Admin approve | P1 | Phân biệt field tự sửa được vs cần duyệt, audit log, notification khi có thay đổi chờ duyệt |
 
 #### M1.2 Danh mục sản phẩm theo NCC
 | ID | Yêu cầu | Priority | Acceptance Criteria |
@@ -105,7 +133,7 @@ GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi:
 | M2.1.2 | Import đơn hàng từ Excel/CSV | P0 | Template download, validate, báo lỗi, preview trước import |
 | M2.1.3 | Xem danh sách đơn hàng: filter theo trạng thái, khách hàng, ngày, sản phẩm | P0 | Pagination, search, export |
 | M2.1.4 | Workflow đơn hàng: Mới → Đã phân bổ → Đang chuẩn bị → Đang giao → Hoàn thành / Hủy | P0 | State machine, không skip bước |
-| M2.1.5 | API nhận đơn hàng từ hệ thống bán hàng bên ngoài | P2 | REST API, webhook, authentication |
+| M2.1.5 | **Tích hợp KiotViet**: Nhận đơn hàng real-time từ KiotViet qua webhook. Hệ thống validate signature (HMAC), dedup (idempotency key), map sản phẩm KiotViet → sản phẩm nội bộ, tự động tạo order. Có manual sync fallback khi webhook miss. Dashboard đồng bộ hiển thị trạng thái, lỗi, mappings | P0 | Webhook receiver với HMAC validation, dedup bằng KiotViet order ID, product mapping UI, sync status dashboard, manual trigger, error log với retry |
 
 #### M2.2 Quản lý khách hàng
 | ID | Yêu cầu | Priority | Acceptance Criteria |
@@ -132,6 +160,10 @@ GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi:
 | M3.1.2 | Ưu tiên cam kết hợp đồng → phân bổ theo điểm → giới hạn công suất → đa dạng hóa (≤40%/NCC) | P0 | 4 quy tắc tuần tự, hiển thị lý do phân bổ |
 | M3.1.3 | Cho phép điều chỉnh thủ công sau khi tự động phân bổ | P0 | Lock/unlock, audit log |
 | M3.1.4 | Duyệt bảng phân bổ tháng (Manager/Director) | P0 | Workflow: Draft → Review → Approved |
+| M3.1.5 | **Gửi phân bổ cho NCC thương lượng**: Sau khi bảng phân bổ được duyệt, hệ thống gửi thông báo cho từng NCC trên Supplier Portal kèm deadline phản hồi. NCC xem chi tiết phân bổ (sản phẩm × số lượng × lịch giao) | P0 | Notification push + email, deadline configurable (default 48h), hiển thị trên Supplier Portal dashboard |
+| M3.1.6 | **NCC phản hồi phân bổ (Counter-Propose)**: NCC Owner có thể Đồng ý toàn bộ, hoặc đề xuất điều chỉnh (thay đổi số lượng, lý do). Mỗi dòng phân bổ có thể điều chỉnh riêng | P0 | Form counter-propose với: qty đề xuất, lý do (dropdown + free text), trạng thái per line item |
+| M3.1.7 | **Xử lý thương lượng (Negotiation Rounds)**: Tối đa 3 vòng thương lượng. Vòng 1: NCC counter → Manager review → Revised/Agree/Reject. Vòng 2-3: lặp lại. Sau 3 vòng không đồng ý → tự động escalate lên Director | P0 | State machine: Proposed → CounterProposed → Revised → Agreed/Rejected/Escalated. Max 3 rounds enforced. Timeline hiển thị toàn bộ lịch sử thương lượng |
+| M3.1.8 | **Dashboard thương lượng (Admin)**: Bảng tổng hợp tất cả negotiation đang active, filter theo NCC/trạng thái/deadline. Inline actions: approve, reject, revise, escalate | P1 | Real-time status, countdown deadline, batch actions |
 
 #### M3.2 Phân bổ ngày
 | ID | Yêu cầu | Priority | Acceptance Criteria |
@@ -242,6 +274,50 @@ GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi:
 
 ---
 
+### M10: Contract Management (Quản lý Hợp đồng) — Phase 2+
+
+| ID | Yêu cầu | Priority | Acceptance Criteria |
+|----|---------|----------|-------------------|
+| M10.1 | Tạo hợp đồng mua hàng với NCC: kỳ hạn, sản lượng cam kết min/max, giá, điều khoản | P1 | Template hợp đồng, trạng thái: Draft → Active → Expired |
+| M10.2 | Theo dõi thực hiện hợp đồng: cam kết vs thực giao | P1 | % hoàn thành, cảnh báo khi thấp |
+| M10.3 | Cảnh báo hợp đồng sắp hết hạn (30/60/90 ngày) | P2 | Notification tự động |
+| M10.4 | NCC xem hợp đồng trên Supplier Portal | P2 | Read-only, download PDF |
+| M10.5 | Liên kết hợp đồng → phân bổ (commitment first rule) | P1 | Auto-fill cam kết khi tạo allocation plan |
+
+---
+
+### M11: Cold Chain Monitoring (Giám sát Chuỗi lạnh) — Phase 3+
+
+| ID | Yêu cầu | Priority | Acceptance Criteria |
+|----|---------|----------|-------------------|
+| M11.1 | Ghi nhận nhiệt độ tại các chặng: NCC → vận chuyển → kho → giao hàng | P2 | Manual input hoặc IoT sensor integration |
+| M11.2 | Cảnh báo khi nhiệt độ vượt ngưỡng (>8°C hoặc <2°C) | P2 | Push notification, ghi vào lot record |
+| M11.3 | Đánh giá ảnh hưởng gián đoạn chuỗi lạnh đến shelf life | P3 | Giảm RSL tự động, cảnh báo |
+
+---
+
+### M12: Waste Management (Quản lý Hàng hủy) — Phase 2+
+
+| ID | Yêu cầu | Priority | Acceptance Criteria |
+|----|---------|----------|-------------------|
+| M12.1 | Ghi nhận hàng hủy: lot, số lượng, lý do (hết hạn/hỏng/reject QC) | P1 | Liên kết với lot, ảnh chứng từ |
+| M12.2 | Báo cáo hàng hủy: theo sản phẩm, NCC, nguyên nhân, thời gian | P1 | Trend chart, so sánh tỷ lệ |
+| M12.3 | Đề xuất giảm waste: chuyển sang chế biến (sấy/đóng hộp) khi hàng gần hết hạn | P2 | Auto-suggest dựa trên RSL |
+| M12.4 | Chi phí hàng hủy tính vào landed cost NCC | P2 | Ảnh hưởng scoring |
+
+---
+
+### M13: Transport Management (Quản lý Vận chuyển) — Phase 3+
+
+| ID | Yêu cầu | Priority | Acceptance Criteria |
+|----|---------|----------|-------------------|
+| M13.1 | Lập lịch xe giao/nhận hàng: route, NCC, thời gian, xe | P2 | Calendar view, conflict detection |
+| M13.2 | Theo dõi trạng thái vận chuyển: đang đi → đã nhận | P2 | Status update, thời gian thực |
+| M13.3 | Tính chi phí vận chuyển theo route, khối lượng | P3 | Tích hợp vào landed cost |
+| M13.4 | Ghi nhận hao hụt vận chuyển | P2 | So sánh SL xuất vs SL nhận |
+
+---
+
 ### M14: Shrinkage Management (Hao hụt)
 
 | ID | Yêu cầu | Priority | Acceptance Criteria |
@@ -250,6 +326,35 @@ GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi:
 | M14.2 | Ghi nhận hao hụt theo chặng: NCC → vận chuyển → kho → giao | P0 | So sánh vs chuẩn |
 | M14.3 | Buffer hao hụt trong phân bổ (cần 100kg → đặt 108kg) | P0 | Tự động tính theo hao hụt trung bình NCC |
 | M14.4 | Cảnh báo khi hao hụt thực tế > chuẩn | P0 | Trigger điều tra nguyên nhân |
+
+---
+
+### M15: Messaging (Nhắn tin)
+
+| ID | Yêu cầu | Priority | Acceptance Criteria |
+|----|---------|----------|-------------------|
+| M15.1 | Gửi tin nhắn giữa Admin Portal và Supplier Portal: text + đính kèm (ảnh, PDF, max 10MB) | P0 | Real-time delivery, hiển thị trạng thái (sent/read), hỗ trợ cả admin → NCC và NCC → admin |
+| M15.2 | Tin nhắn theo thread (conversation): mỗi thread liên kết với 1 entity (allocation, delivery, order, registration) | P0 | Thread title auto-generated từ entity, xem timeline, entity link clickable |
+| M15.3 | Reply trong thread: trả lời tin nhắn cũ, quote message gốc | P1 | Nested reply UI, scroll to quoted message |
+| M15.4 | Notification preferences: NCC chọn nhận thông báo qua in-app, email, hoặc cả hai | P1 | Settings page trên Supplier Portal, default = cả hai |
+| M15.5 | Message templates: Admin có bộ template tin nhắn thường dùng (xác nhận phân bổ, yêu cầu cập nhật lịch, nhắc giao hàng) | P2 | CRUD templates, insert vào compose, variables auto-fill (tên NCC, ngày, số lượng) |
+| M15.6 | Admin xem tất cả threads: filter theo NCC, entity type, trạng thái (open/closed) | P0 | Search, sort by last message, unread count |
+| M15.7 | Đóng thread khi issue resolved | P1 | Closed status, có thể reopen |
+
+---
+
+### M16: Supplier Portal (Cổng NCC)
+
+| ID | Yêu cầu | Priority | Acceptance Criteria |
+|----|---------|----------|-------------------|
+| M16.1 | **NCC Dashboard**: Tổng quan KPI (điểm, xếp hạng, fill rate gần nhất), lịch giao hàng sắp tới, phân bổ đang chờ phản hồi, tin nhắn chưa đọc | P0 | Personalized theo NCC đang login, real-time data |
+| M16.2 | **Self-Registration Flow**: Form đăng ký multi-step (thông tin cơ bản → sản phẩm & công suất → upload tài liệu → xác nhận email → chờ duyệt). Màn hình trạng thái đăng ký | P0 | 4 steps, progress indicator, save draft, email verification, status page |
+| M16.3 | **Harvest Schedule**: Calendar view để NCC nhập số lượng dự kiến thu hoạch theo ngày/tuần, phân theo loại nấm | P0 | Calendar UI, bulk input, copy từ tuần trước, deadline reminder |
+| M16.4 | **Allocation Response**: Xem phân bổ nhận được, đồng ý hoặc counter-propose từng dòng, xem timeline thương lượng, deadline countdown | P0 | Card-based UI, per-line action, timer, history timeline |
+| M16.5 | **Delivery Confirmation**: Xem lịch giao hàng, xác nhận đã giao, xem kết quả QC sau khi Nham Xanh kiểm tra | P1 | List + detail view, QC result read-only, notification khi QC done |
+| M16.6 | **Performance & Score**: Xem điểm tổng hợp, chi tiết 5 tiêu chí, xu hướng theo tháng (radar chart + trend line), xếp hạng hiện tại (badge) | P1 | Radar chart, line chart, rank badge (A/B/C/D) |
+| M16.7 | **Language Switcher**: Chuyển đổi ngôn ngữ Tiếng Việt ↔ English trên toàn bộ Supplier Portal | P0 | Persistent preference (lưu vào user profile), instant switch không reload, bao gồm cả labels, messages, notifications |
+| M16.8 | **NCC Staff Management**: NCC Owner thêm/xóa staff users cho NCC của mình, gán quyền hạn chế | P2 | Invite by email, role = NCC Staff (fixed), max 5 staff per NCC |
 
 ---
 
@@ -262,34 +367,39 @@ GM Supply quản lý toàn bộ chuỗi cung ứng nấm tươi:
 | NFR3 | Hiệu suất | Import 1000 đơn hàng từ Excel | < 30 giây |
 | NFR4 | Khả dụng | Uptime | ≥ 99.5% |
 | NFR5 | Bảo mật | Authentication | JWT + refresh token |
-| NFR6 | Bảo mật | Authorization | RBAC per module |
+| NFR6 | Bảo mật | Authorization | RBAC per module, portal-level data isolation (NCC chỉ xem data của mình) |
 | NFR7 | Bảo mật | Data encryption | AES-256 cho dữ liệu nhạy cảm |
 | NFR8 | Responsive | Thiết bị | Desktop + Tablet (iPad) |
 | NFR9 | Data | Lưu trữ | 3 năm giao dịch |
 | NFR10 | Data | Backup | Daily automated |
-| NFR11 | Ngôn ngữ | UI | Tiếng Việt (primary) |
+| NFR11 | Ngôn ngữ | UI | Tiếng Việt (primary), English cho Supplier Portal (i18n) |
 | NFR12 | Accessibility | WCAG | Level AA |
+| NFR13 | Bảo mật | Multi-portal isolation | Supplier Portal users không truy cập được Admin routes/data. Admin Portal users không impersonate NCC trừ khi có quyền Admin |
+| NFR14 | Bảo mật | Self-registration | Email verification bắt buộc, rate limit đăng ký (max 5/IP/hour) |
+| NFR15 | Integration | KiotViet SLA | Webhook processing < 2 giây, retry 3 lần (exponential backoff), manual sync available 24/7, sync lag dashboard |
+| NFR16 | i18n | Supplier Portal bilingual | Tất cả UI text qua i18n keys, hỗ trợ Vi + En, date/number format theo locale |
 
 ---
 
 ## 5. Phân kỳ triển khai
 
-### Phase 1 — MVP (8-10 tuần)
-**Mục tiêu**: Thay thế Excel, quản lý NCC + đơn hàng + phân bổ cơ bản
+### Phase 1 — MVP (10-12 tuần)
+**Mục tiêu**: Thay thế Excel, quản lý NCC + đơn hàng + phân bổ cơ bản, Supplier Portal core, KiotViet integration
 
 | Tuần | Deliverable |
 |------|------------|
-| 1-2 | Setup infra, DB schema, Auth, User management |
-| 3-4 | M1: Supplier CRUD + Product catalog |
-| 5-6 | M2: Order management + Excel import |
-| 7-8 | M3: Monthly allocation (basic) |
-| 9-10 | M6: Dashboard + M7: Admin config |
+| 1-2 | Setup infra, DB schema, Auth (dual-portal), User management, i18n framework |
+| 3-4 | M1: Supplier CRUD + Product catalog, M1.1.6 Self-Registration flow |
+| 5-6 | M2: Order management + Excel import, M2.1.5 KiotViet webhook integration |
+| 7-8 | M3: Monthly allocation (basic) + M3.1.5-M3.1.8 Negotiation workflow |
+| 9-10 | M16: Supplier Portal (Dashboard, Allocation Response, Harvest Schedule, Language Switcher) |
+| 11-12 | M15: Messaging, M6: Dashboard, M7: Admin config |
 
 ### Phase 2 — Core (6-8 tuần)
-M3.2 Daily allocation, M1.5 Scoring, M5 Inventory FEFO, M8 QC, M14 Shrinkage
+M3.2 Daily allocation, M1.5 Scoring, M5 Inventory FEFO, M8 QC, M14 Shrinkage, M10 Contracts, M12 Waste, M16.5-M16.6 Supplier Deliveries & Scores
 
 ### Phase 3 — Intelligence (6-8 tuần)
-M2.3 Forecast, M4 Rebalancing, M4.3 What-if, Workflow approvals
+M2.3 Forecast, M4 Rebalancing, M4.3 What-if, Workflow approvals, M11 Cold Chain, M13 Transport
 
 ### Phase 4 — Optimization (4-6 tuần)
-M9 Pricing, API integrations, Advanced reports, Notifications
+M9 Pricing, Advanced reports, Notifications optimization, M16.8 NCC Staff Management
