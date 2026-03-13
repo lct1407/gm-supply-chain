@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "mcp__plugin_context7_context7__resolve-library-id",
-      "Bash(glab --version 2>/dev/null || echo \"glab not installed\")"
+      "Bash(glab --version 2>/dev/null || echo \"glab not installed\")",
+      "Bash(claude config:*)",
+      "Bash(where claude:*)",
+      "Bash(powershell -Command \"[Environment]::GetEnvironmentVariable\\('Path', 'User'\\)\")",
+      "Bash(echo $SHELL; echo \"HOME=$HOME\")"
     ]
   }
 }
