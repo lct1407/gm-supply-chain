@@ -58,7 +58,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Tong quan",
     icon: LayoutDashboard,
-    href: "/",
+    href: "/dashboard",
   },
   {
     label: "Nha cung cap",
@@ -221,7 +221,6 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
   };
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(href + "/");
   };
 
