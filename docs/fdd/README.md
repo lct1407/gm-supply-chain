@@ -391,7 +391,114 @@
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Key Design Decisions
+### 2.2 Additional Tables: Supply Schedule & Daily Allocation
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                  SUPPLY CAPACITY & SCHEDULE                            │
+│                                                                      │
+│  ┌──────────────────────────┐    ┌──────────────────────────┐       │
+│  │  supplier_capacities      │    │  supply_daily_schedules   │       │
+│  │──────────────────────────│    │──────────────────────────│       │
+│  │ id (UUID)                │    │ id (UUID)                │       │
+│  │ supplier_id (FK)         │    │ supplier_id (FK)         │       │
+│  │ product_id (FK)          │    │ product_id (FK)          │       │
+│  │ month (date, 1st of)    │    │ schedule_date (date)     │       │
+│  │ peak_capacity_kg         │    │ planned_qty              │       │
+│  │ normal_capacity_kg       │    │ confirmed_qty            │       │
+│  │ min_order_qty            │    │ actual_qty               │       │
+│  │ seasonal_factor          │    │ status (planned/         │       │
+│  │   (default 1.0)          │    │   confirmed/delivered/   │       │
+│  │ notes                    │    │   adjusted/cancelled)    │       │
+│  │ updated_by (FK)          │    │ confirmed_at             │       │
+│  │ created_at / updated_at  │    │ notes                    │       │
+│  │ deleted_at               │    │ created_at / updated_at  │       │
+│  └──────────────────────────┘    │ deleted_at               │       │
+│                                  └──────────────────────────┘       │
+│                                                                      │
+│  ┌──────────────────────────┐    ┌──────────────────────────┐       │
+│  │  supply_commitments       │    │  daily_allocations        │       │
+│  │──────────────────────────│    │──────────────────────────│       │
+│  │ id (UUID)                │    │ id (UUID)                │       │
+│  │ supplier_id (FK)         │    │ allocation_date (date)   │       │
+│  │ product_id (FK)          │    │ order_item_id (FK)       │       │
+│  │ month (date, 1st of)    │    │ supplier_id (FK)         │       │
+│  │ commitment_type          │    │ product_id (FK)          │       │
+│  │   (contract/verbal/      │    │ lot_id (FK, nullable)    │       │
+│  │    self_declared)         │    │ allocated_qty            │       │
+│  │ committed_min_qty        │    │ actual_delivered_qty     │       │
+│  │ committed_max_qty        │    │ status (planned/         │       │
+│  │ contract_id (FK,         │    │   confirmed/fulfilled/   │       │
+│  │   nullable)               │    │   shortage/surplus)      │       │
+│  │ status (draft/confirmed/ │    │ matched_by (auto/manual) │       │
+│  │   active/completed)       │    │ notes                    │       │
+│  │ fulfillment_qty          │    │ created_by (FK)          │       │
+│  │   (actual delivered)      │    │ created_at / updated_at  │       │
+│  │ fulfillment_pct          │    │ deleted_at               │       │
+│  │ created_at / updated_at  │    └──────────────────────────┘       │
+│  │ deleted_at               │                                       │
+│  └──────────────────────────┘                                       │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│               KIOTVIET EXTENDED SYNC                                   │
+│                                                                      │
+│  ┌──────────────────────────┐    ┌──────────────────────────┐       │
+│  │  kiotviet_customers       │    │  kiotviet_price_books     │       │
+│  │──────────────────────────│    │──────────────────────────│       │
+│  │ id (UUID)                │    │ id (UUID)                │       │
+│  │ kiotviet_id (int,unique) │    │ kiotviet_id (int,unique) │       │
+│  │ code                     │    │ name                     │       │
+│  │ name                     │    │ is_active                │       │
+│  │ type (0=individual,      │    │ start_date               │       │
+│  │   1=organization)        │    │ end_date                 │       │
+│  │ groups (text)            │    │ customer_id (FK,         │       │
+│  │   -- "Khach HRC" etc     │    │   nullable)              │       │
+│  │ customer_id (FK,         │    │ customer_group_id (FK,   │       │
+│  │   nullable) -- internal  │    │   nullable)              │       │
+│  │ organization             │    │ last_synced_at           │       │
+│  │ contact_number           │    │ created_at / updated_at  │       │
+│  │ address                  │    │ deleted_at               │       │
+│  │ debt                     │    └──────────────────────────┘       │
+│  │ total_invoiced           │                                       │
+│  │ total_revenue            │    ┌──────────────────────────┐       │
+│  │ last_synced_at           │    │  kiotviet_purchase_orders │       │
+│  │ created_at / updated_at  │    │──────────────────────────│       │
+│  │ deleted_at               │    │ id (UUID)                │       │
+│  └──────────────────────────┘    │ kiotviet_id (int,unique) │       │
+│                                  │ code                     │       │
+│  ┌──────────────────────────┐    │ purchase_date            │       │
+│  │  kiotviet_supplier_      │    │ supplier_id (FK)         │       │
+│  │    mappings               │    │ kiotviet_supplier_id     │       │
+│  │──────────────────────────│    │ total                    │       │
+│  │ id (UUID)                │    │ status                   │       │
+│  │ kiotviet_supplier_id     │    │ details (JSONB)          │       │
+│  │ kiotviet_supplier_name   │    │   [{productId, qty,      │       │
+│  │ supplier_id (FK)         │    │     price, discount}]    │       │
+│  │ is_active                │    │ last_synced_at           │       │
+│  │ created_at / updated_at  │    │ created_at / updated_at  │       │
+│  │ deleted_at               │    │ deleted_at               │       │
+│  └──────────────────────────┘    └──────────────────────────┘       │
+│                                                                      │
+│  ┌──────────────────────────┐                                       │
+│  │  customer_groups          │                                       │
+│  │──────────────────────────│                                       │
+│  │ id (UUID)                │                                       │
+│  │ name                     │                                       │
+│  │ code                     │                                       │
+│  │ priority_level (1-5)     │                                       │
+│  │ rsl_min_pct (0-100)      │                                       │
+│  │ lead_time_days           │                                       │
+│  │ pricing_tier             │                                       │
+│  │ kiotviet_group_name      │ -- mapped from KiotViet "groups"      │
+│  │ description              │                                       │
+│  │ created_at / updated_at  │                                       │
+│  │ deleted_at               │                                       │
+│  └──────────────────────────┘                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.3 Key Design Decisions
 
 | Quyết định | Lý do |
 |-----------|-------|
@@ -406,22 +513,39 @@
 | messages + message_threads | Thread-based messaging liên kết entity, dễ track conversation history |
 | allocation_negotiations per round | Mỗi round 1 record, max 3 rounds, state machine rõ ràng |
 | KiotViet sync logs riêng | Dedup bằng kiotviet_order_id, debug dễ, retry tracking |
+| **supplier_capacities** separate from supplier_products | Capacity thay đổi theo tháng/mùa, cần history riêng. supplier_products giữ thông tin tĩnh (giá, lead time) |
+| **supply_daily_schedules** per day per NCC per product | Granularity ngày quan trọng với nấm tươi. Status flow: planned → confirmed → delivered cho tracking chặt |
+| **supply_commitments** với commitment_type | Phân biệt binding (hợp đồng) vs soft (verbal) commitments. Track fulfillment_pct cho scoring |
+| **daily_allocations** separate from monthly allocations | Daily = operational matching (order → NCC → lot). Monthly = strategic planning. Cần flexibility khác nhau |
+| **customer_groups** with RSL & priority | Mỗi nhóm KH (HRC, Siêu thị, Retail) có RSL requirement và priority khác nhau → ảnh hưởng allocation logic |
+| **kiotviet_customers** mirror table | Lưu raw KiotViet data, link soft tới internal customers. Cho phép reconciliation & sync conflict resolution |
+| **kiotviet_purchase_orders** với details JSONB | PO details flexible, dùng cho reconciliation với delivery. JSONB vì structure có thể thay đổi theo KiotViet API |
 
-### 2.3 New/Updated Tables Summary
+### 2.4 New/Updated Tables Summary
 
 | Table | Status | Purpose |
 |-------|--------|---------|
 | `users` | **Updated** | Added: `portal_type`, `preferred_language`, `supplier_id`, `email_verified_at` |
-| `orders` | **Updated** | Added: `source`, `external_id` (for KiotViet orders) |
+| `orders` | **Updated** | Added: `source` (manual/excel/kiotviet/shopee), `external_id`, `sale_channel` |
+| `customers` | **Updated** | Added: `customer_group_id (FK)`, `kiotviet_customer_id` |
 | `allocation_plans` | **Updated** | Added: `negotiation_deadline` |
 | `allocations` | **Updated** | Added: `negotiation_status` |
+| `supplier_capacities` | **New** | Monthly capacity per NCC × product, seasonal factor |
+| `supply_daily_schedules` | **New** | Daily supply schedule per NCC × product, with confirmation flow |
+| `supply_commitments` | **New** | Monthly commitment (contract/verbal) per NCC × product |
+| `daily_allocations` | **New** | Daily operational matching: order → NCC → lot |
+| `customer_groups` | **New** | Customer groups with RSL, priority, pricing rules |
 | `supplier_users` | **New** | Links users to suppliers (owner/staff roles) |
 | `supplier_registrations` | **New** | Self-registration requests with documents (JSONB) |
 | `messages` | **New** | Cross-portal messages with attachments |
 | `message_threads` | **New** | Conversation threads linked to entities |
 | `allocation_negotiations` | **New** | Negotiation rounds with state machine |
 | `kiotviet_sync_logs` | **New** | Sync tracking (webhook/manual/scheduled) |
-| `kiotviet_product_mappings` | **New** | KiotViet product ↔ internal product mapping |
+| `kiotviet_product_mappings` | **New** | KiotViet product ↔ internal product mapping (multi-unit support) |
+| `kiotviet_customers` | **New** | KiotViet customer mirror with group mapping |
+| `kiotviet_price_books` | **New** | KiotViet per-customer pricing sync |
+| `kiotviet_supplier_mappings` | **New** | KiotViet supplier ↔ internal NCC mapping |
+| `kiotviet_purchase_orders` | **New** | KiotViet PO data for delivery reconciliation |
 
 ---
 

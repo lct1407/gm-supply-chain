@@ -85,6 +85,16 @@ const navGroups: NavGroup[] = [
     children: [
       { label: "Ke hoach thang", href: "/allocations", icon: CalendarRange },
       {
+        label: "Phan bo ngay",
+        href: "/allocations/daily",
+        icon: ClipboardList,
+      },
+      {
+        label: "Lich cung ung & ATP",
+        href: "/allocations/supply-schedule",
+        icon: PackageOpen,
+      },
+      {
         label: "Thuong luong",
         href: "/allocations/negotiations",
         icon: Handshake,
@@ -167,6 +177,8 @@ const viLabels: Record<string, string> = {
   "Don vi tinh": "\u0110\u01a1n v\u1ecb t\u00ednh",
   "Cau hinh": "C\u1ea5u h\u00ecnh",
   "Nhat ky he thong": "Nh\u1eadt k\u00fd h\u1ec7 th\u1ed1ng",
+  "Phan bo ngay": "Ph\u00e2n b\u1ed5 ng\u00e0y",
+  "Lich cung ung & ATP": "L\u1ecbch cung \u1ee9ng & ATP",
 };
 
 function getViLabel(key: string): string {
